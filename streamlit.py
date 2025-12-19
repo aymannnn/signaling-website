@@ -95,22 +95,10 @@ def process_streamlit_inputs(inputs):
 
 # once you get the dataframes, predict and graph and circle minimum
 
-def run_simulation(processed_inputs):
-    x_axis = processed_inputs['signal_range']
+def get_predictions(processed_inputs):
     predictor_X = processed_inputs['predictor_X']
     predictor_X.sort_values(by=['signal_value'], inplace=True)
     y_pred = knn_loaded.predict(predictor_X)
-    
-    # now graph the X axis versus the y axis
-    # ideally the graph will circle the minimum
-    
-    ## GRAPH HERE, MAKE IT PRETTY, CIRCLE THE MINIMUM IF YOU CAN
-    
-    # Graph title: Predicted Reviews per Program vs. Signal Value
-    
-    ## Also print for the user ABOVE the graph:
-    # The optimal signal value is X.
-    
     return y_pred
 
 
@@ -190,17 +178,18 @@ def main():
     if error_msg:
         st.error(error_msg)
 
+    # don't allow to click if error inputs
     run_clicked = st.button("Run Signal Prediction", disabled=bool(error_msg))
 
     if run_clicked:
         with st.spinner("Running simulation..."):
             processed = process_streamlit_inputs(inputs)
-            y_pred = run_simulation(processed)
+            y_pred = get_predictions(processed)
 
-            # Display simulated positions (requested in comments)
-            st.markdown(f"**Simulated Positions:** {processed['simulated_positions']:,}")
+            # Display simulated positions (
+            st.markdown(f"Simulated positions (may differ slightly from input to ensure equal distribution of positions among programs): {processed['simulated_positions']:,}")
 
-            # Find and display the optimal signal value (requested in comments)
+            # Find and display the optimal signal value
             y_pred_arr = np.array(y_pred)
             min_idx = int(np.argmin(y_pred_arr))
             signal_values = list(processed["signal_range"])
