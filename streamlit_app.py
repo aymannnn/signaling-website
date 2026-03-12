@@ -15,7 +15,8 @@ ANALYSES_TO_GRAPH = [
     "base",
     "random_distribution",
     "random_applicant_rank_list",
-    "random_program_rank_list"
+    "random_program_rank_list",
+    "random_all"
 ]
 
 METRIC_NAMES = {
@@ -34,6 +35,15 @@ PANEL_TITLES = [
     "Panel C: Workload vs. Expected Interviews",
     "Panel D: Decile Match Heatmap (Base Analysis) at Signal = {}"
 ]
+
+Legends = {
+    'A': '''Visualization of the probability of an interview given a signal, probability of an interview without signaling, percentage of matches from signals, and percentage of matches from no signals.''',
+    'B': '''Visualization of unfilled program positions, which is equal to the number of applicants who did not that match that could have filled a spot.''',
+    'C': '''Visualization of the balance between program review burden and expected number of interviews from signals. Non-signals are not demonstrated as the probability of an interview and match without signaling is close to 0.''',
+    'D': '''Decile matching post-match, calculated at a specified signal value. Panels A-C are graphed with means and 95/% confidence intervals.''',
+    'Residual': '''Visualization of the trade-offs in minimizing application reviews versus maximizing expected interviews (signaled). Panel A shows the absolute difference in the signal values at which the local optimum occurs. Panel B shows the relative increase in reviews at the signal value where maximum interviews occur. Likewise, panel C shows the relative loss of expected interviews at the signal value where minimum reviews occur.''',
+    'Decile': '''Post-match applicant and program match distribution for various analyses, depicted through decile plots. '''
+}
 
 ANALYSIS_COLORS = sns.color_palette("tab10", len(ANALYSES_TO_GRAPH))
 
@@ -116,7 +126,7 @@ def create_panel_a(data_dict, program_name):
     analysis_legend_elements = [Line2D([0], [0], color=ANALYSIS_COLORS[i], lw=3, label=ana)
                                 for i, ana in enumerate(ANALYSES_TO_GRAPH)]
 
-    for i, analysis in enumerate(ANALYSES_TO_GRAPH):
+    for i, analysis in reversed(list(enumerate(ANALYSES_TO_GRAPH))):
         if analysis not in data_dict: continue
         prog_df = data_dict[analysis][data_dict[analysis]['program'] == program_name].sort_values('signals')
         if prog_df.empty: continue
@@ -147,7 +157,7 @@ def create_panel_b(data_dict, program_name):
                                 for i, ana in enumerate(ANALYSES_TO_GRAPH)]
 
     metric_b = 'unfilled_positions_mean'
-    for i, analysis in enumerate(ANALYSES_TO_GRAPH):
+    for i, analysis in reversed(list(enumerate(ANALYSES_TO_GRAPH))):
         if analysis not in data_dict: continue
         prog_df = data_dict[analysis][data_dict[analysis]['program'] == program_name].sort_values('signals')
         if prog_df.empty: continue
@@ -175,7 +185,7 @@ def create_panel_c(data_dict, program_name):
 
     metric_c1 = 'reviews_per_program_mean'
     metric_c2 = 'expect_int_per_signal_mean'
-    for i, analysis in enumerate(ANALYSES_TO_GRAPH):
+    for i, analysis in reversed(list(enumerate(ANALYSES_TO_GRAPH))):
         if analysis not in data_dict: continue
         prog_df = data_dict[analysis][data_dict[analysis]['program'] == program_name].sort_values('signals')
         if prog_df.empty: continue
@@ -199,33 +209,37 @@ def create_panel_c(data_dict, program_name):
     plt.tight_layout()
     return fig
 
-def create_panel_d(data_dict, program_name, decile_signal):
-    fig, ax_d = plt.subplots(figsize=(8, 6))
-    ax_d.set_title(PANEL_TITLES[3].format(decile_signal), fontsize=14)
+def create_single_decile_plot(df, program_name, analysis_name, decile_signal):
+    """
+    Generates a single decile match heatmap for a specific analysis and signal value.
+    """
+    fig, ax = plt.subplots(figsize=(8, 7))
+    
+    prog_df = df[df['program'] == program_name]
+    point_data = prog_df[prog_df['signals'] == decile_signal]
 
-    if 'base' in data_dict:
-        prog_df = data_dict['base'][data_dict['base']['program'] == program_name]
-        point_data = prog_df[prog_df['signals'] == decile_signal]
-
-        if point_data.empty:
-            ax_d.text(0.5, 0.5, f"No data found for signals = {decile_signal}", ha='center', va='center')
-        else:
-            decile_matrix = np.zeros((10, 10))
-            for p in range(1, 11):
-                for a in range(1, 11):
-                    col_name = f'p{p}_a{a}'
-                    if col_name in point_data.columns:
-                        decile_matrix[p-1, a-1] = point_data.iloc[0][col_name]
-
-            sns.heatmap(decile_matrix, ax=ax_d, cmap="YlGnBu", annot=False, vmin=0, cbar_kws={'label': 'Match Probability'})
-            ax_d.set_xticks(np.arange(10) + 0.5)
-            ax_d.set_xticklabels(range(1, 11))
-            ax_d.set_yticks(np.arange(10) + 0.5)
-            ax_d.set_yticklabels(range(1, 11))
-            ax_d.set_xlabel("Applicant Decile", fontsize=12)
-            ax_d.set_ylabel("Program Decile", fontsize=12)
+    if point_data.empty:
+        ax.text(0.5, 0.5, f"No data for {analysis_name}\nat signals = {decile_signal}",
+                ha='center', va='center')
+        ax.set_title(f"Analysis: {analysis_name}", fontsize=14)
     else:
-        ax_d.text(0.5, 0.5, "'base' analysis not found in data", ha='center', va='center')
+        decile_matrix = np.zeros((10, 10))
+        for p in range(1, 11):
+            for a in range(1, 11):
+                col_name = f'p{p}_a{a}'
+                if col_name in point_data.columns:
+                    decile_matrix[p-1, a-1] = point_data.iloc[0][col_name]
+
+        sns.heatmap(decile_matrix, ax=ax, cmap="YlGnBu", annot=False, square=True,
+                    vmin=0, cbar_kws={'label': 'Match Probability', 'shrink': 0.8})
+
+        ax.set_title(f"Analysis: {analysis_name}", fontsize=16, fontweight='bold')
+        ax.set_xticks(np.arange(10) + 0.5)
+        ax.set_xticklabels(range(1, 11))
+        ax.set_yticks(np.arange(10) + 0.5)
+        ax.set_yticklabels(range(1, 11))
+        ax.set_xlabel("Applicant Decile")
+        ax.set_ylabel("Program Decile")
 
     plt.tight_layout()
     return fig
@@ -290,6 +304,7 @@ if len(programs) > 0:
     selected_program = st.selectbox("Select Program", programs)
 
     st.subheader(PANEL_TITLES[0])
+    st.markdown(f"<p style='color: black; font-size: 1.1rem;'>{Legends['A']}</p>", unsafe_allow_html=True)
     col1_a, col2_a = st.columns(2)
     with col1_a:
         st.write("Mean Applications: 72")
@@ -302,6 +317,7 @@ if len(programs) > 0:
             st.pyplot(fig_a_30)
 
     st.subheader(PANEL_TITLES[1])
+    st.markdown(f"<p style='color: black; font-size: 1.1rem;'>{Legends['B']}</p>", unsafe_allow_html=True)
     col1_b, col2_b = st.columns(2)
     with col1_b:
         st.write("Mean Applications: 72")
@@ -314,6 +330,7 @@ if len(programs) > 0:
             st.pyplot(fig_b_30)
 
     st.subheader(PANEL_TITLES[2])
+    st.markdown(f"<p style='color: black; font-size: 1.1rem;'>{Legends['C']}</p>", unsafe_allow_html=True)
     col1_c, col2_c = st.columns(2)
     with col1_c:
         st.write("Mean Applications: 72")
@@ -327,6 +344,7 @@ if len(programs) > 0:
 
 
 st.header("Residual Graphs")
+st.markdown(f"<p style='color: black; font-size: 1.1rem;'>{Legends['Residual']}</p>", unsafe_allow_html=True)
 col_r1, col_r2 = st.columns(2)
 
 with col_r1:
@@ -348,7 +366,8 @@ with col_r2:
         st.write("No residual data available for Mean Applications: 30.")
 
 if len(programs) > 0:
-    st.subheader("Decile Graph (Panel D)")
+    st.header("Decile Graphs")
+    st.markdown(f"<p style='color: black; font-size: 1.1rem;'>{Legends['Decile']}</p>", unsafe_allow_html=True)
 
     prog_df_72 = data_72["base"][data_72["base"]["program"] == selected_program]
     signal_options = prog_df_72["signals"].unique()
@@ -359,13 +378,24 @@ if len(programs) > 0:
         generate_btn = st.button("Generate")
 
     if generate_btn:
-        col5, col6 = st.columns(2)
-        with col5:
-            st.write("Mean Applications: 72")
-            fig_d_72 = create_panel_d(data_72, selected_program, selected_signal)
-            st.pyplot(fig_d_72)
-        if data_30 is not None:
-            with col6:
-                st.write("Mean Applications: 30")
-                fig_d_30 = create_panel_d(data_30, selected_program, selected_signal)
-                st.pyplot(fig_d_30)
+        st.subheader(f"Side-by-Side Decile Comparisons (72 vs 30) at Signal = {selected_signal}")
+        
+        for analysis in ANALYSES_TO_GRAPH:
+            st.write(f"### Analysis: {analysis}")
+            col_dec1, col_dec2 = st.columns(2)
+            
+            with col_dec1:
+                st.write("**Mean Applications: 72**")
+                if analysis in data_72:
+                    fig_72 = create_single_decile_plot(data_72[analysis], selected_program, analysis, selected_signal)
+                    st.pyplot(fig_72)
+                else:
+                    st.write("Data not found.")
+            
+            with col_dec2:
+                st.write("**Mean Applications: 30**")
+                if analysis in data_30:
+                    fig_30 = create_single_decile_plot(data_30[analysis], selected_program, analysis, selected_signal)
+                    st.pyplot(fig_30)
+                else:
+                    st.write("Data not found.")
