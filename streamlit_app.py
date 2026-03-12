@@ -110,20 +110,12 @@ def calculate_residuals(df, analysis_name):
         })
     return pd.DataFrame(results)
 
-def create_panel_abc(data_dict, program_name):
-    fig = plt.figure(figsize=(20, 7))
-    fig.suptitle(f"{program_name} - Cross-Analysis Comparison", fontsize=22, fontweight='bold')
-    gs = gridspec.GridSpec(1, 3, figure=fig)
-
-    ax_a = fig.add_subplot(gs[0, 0])
-    ax_b = fig.add_subplot(gs[0, 1])
-    ax_c1 = fig.add_subplot(gs[0, 2])
-    ax_c2 = ax_c1.twinx()
+def create_panel_a(data_dict, program_name):
+    fig, ax_a = plt.subplots(figsize=(8, 6))
 
     analysis_legend_elements = [Line2D([0], [0], color=ANALYSIS_COLORS[i], lw=3, label=ana)
                                 for i, ana in enumerate(ANALYSES_TO_GRAPH)]
 
-    # Panel A
     for i, analysis in enumerate(ANALYSES_TO_GRAPH):
         if analysis not in data_dict: continue
         prog_df = data_dict[analysis][data_dict[analysis]['program'] == program_name].sort_values('signals')
@@ -145,7 +137,15 @@ def create_panel_abc(data_dict, program_name):
     ax_a.add_artist(leg1)
     ax_a.legend(handles=metric_legend_elements, loc='upper right', title="Metrics", fontsize=9)
 
-    # Panel B
+    plt.tight_layout()
+    return fig
+
+def create_panel_b(data_dict, program_name):
+    fig, ax_b = plt.subplots(figsize=(8, 6))
+
+    analysis_legend_elements = [Line2D([0], [0], color=ANALYSIS_COLORS[i], lw=3, label=ana)
+                                for i, ana in enumerate(ANALYSES_TO_GRAPH)]
+
     metric_b = 'unfilled_positions_mean'
     for i, analysis in enumerate(ANALYSES_TO_GRAPH):
         if analysis not in data_dict: continue
@@ -163,7 +163,16 @@ def create_panel_abc(data_dict, program_name):
     ax_b.grid(True, linestyle='--', alpha=0.6)
     ax_b.legend(handles=analysis_legend_elements, loc='best')
 
-    # Panel C
+    plt.tight_layout()
+    return fig
+
+def create_panel_c(data_dict, program_name):
+    fig, ax_c1 = plt.subplots(figsize=(8, 6))
+    ax_c2 = ax_c1.twinx()
+
+    analysis_legend_elements = [Line2D([0], [0], color=ANALYSIS_COLORS[i], lw=3, label=ana)
+                                for i, ana in enumerate(ANALYSES_TO_GRAPH)]
+
     metric_c1 = 'reviews_per_program_mean'
     metric_c2 = 'expect_int_per_signal_mean'
     for i, analysis in enumerate(ANALYSES_TO_GRAPH):
@@ -264,19 +273,12 @@ def create_residual_graphs(combined_df):
     plt.subplots_adjust(top=0.88, wspace=0.05)
     return fig
 
-if "show_30" not in st.session_state:
-    st.session_state.show_30 = False
-
-if st.button("Display Results for a Mean of 30 Applications"):
-    st.session_state.show_30 = not st.session_state.show_30
-
-use_30 = st.session_state.show_30
 
 dir_72 = "results/calculated/gamma_72/"
 dir_30 = "results/calculated/gamma_30/"
 
 data_72 = load_data(dir_72)
-data_30 = load_data(dir_30) if use_30 else None
+data_30 = load_data(dir_30)
 
 if "base" in data_72:
     programs = data_72["base"]["program"].unique()
@@ -287,19 +289,65 @@ if len(programs) > 0:
     st.header("Panel Graphs")
     selected_program = st.selectbox("Select Program", programs)
 
-    col1, col2 = st.columns(2) if use_30 else [st.container(), None]
+    st.subheader(PANEL_TITLES[0])
+    col1_a, col2_a = st.columns(2)
+    with col1_a:
+        st.write("Mean Applications: 72")
+        fig_a_72 = create_panel_a(data_72, selected_program)
+        st.pyplot(fig_a_72)
+    if data_30 is not None:
+        with col2_a:
+            st.write("Mean Applications: 30")
+            fig_a_30 = create_panel_a(data_30, selected_program)
+            st.pyplot(fig_a_30)
 
-    with col1:
-        st.subheader("Gamma 72")
-        fig_abc_72 = create_panel_abc(data_72, selected_program)
-        st.pyplot(fig_abc_72)
+    st.subheader(PANEL_TITLES[1])
+    col1_b, col2_b = st.columns(2)
+    with col1_b:
+        st.write("Mean Applications: 72")
+        fig_b_72 = create_panel_b(data_72, selected_program)
+        st.pyplot(fig_b_72)
+    if data_30 is not None:
+        with col2_b:
+            st.write("Mean Applications: 30")
+            fig_b_30 = create_panel_b(data_30, selected_program)
+            st.pyplot(fig_b_30)
 
-    if use_30 and data_30:
-        with col2:
-            st.subheader("Gamma 30")
-            fig_abc_30 = create_panel_abc(data_30, selected_program)
-            st.pyplot(fig_abc_30)
+    st.subheader(PANEL_TITLES[2])
+    col1_c, col2_c = st.columns(2)
+    with col1_c:
+        st.write("Mean Applications: 72")
+        fig_c_72 = create_panel_c(data_72, selected_program)
+        st.pyplot(fig_c_72)
+    if data_30 is not None:
+        with col2_c:
+            st.write("Mean Applications: 30")
+            fig_c_30 = create_panel_c(data_30, selected_program)
+            st.pyplot(fig_c_30)
 
+
+st.header("Residual Graphs")
+col_r1, col_r2 = st.columns(2)
+
+with col_r1:
+    st.subheader("Mean Applications: 72")
+    res_data_72 = load_residual_data(dir_72)
+    if not res_data_72.empty:
+        fig_res_72 = create_residual_graphs(res_data_72)
+        st.pyplot(fig_res_72)
+    else:
+        st.write("No residual data available for Mean Applications: 72.")
+
+with col_r2:
+    st.subheader("Mean Applications: 30")
+    res_data_30 = load_residual_data(dir_30)
+    if not res_data_30.empty:
+        fig_res_30 = create_residual_graphs(res_data_30)
+        st.pyplot(fig_res_30)
+    else:
+        st.write("No residual data available for Mean Applications: 30.")
+
+if len(programs) > 0:
     st.subheader("Decile Graph (Panel D)")
 
     prog_df_72 = data_72["base"][data_72["base"]["program"] == selected_program]
@@ -311,35 +359,13 @@ if len(programs) > 0:
         generate_btn = st.button("Generate")
 
     if generate_btn:
-        col5, col6 = st.columns(2) if use_30 else [st.container(), None]
+        col5, col6 = st.columns(2)
         with col5:
-            st.write("Gamma 72")
+            st.write("Mean Applications: 72")
             fig_d_72 = create_panel_d(data_72, selected_program, selected_signal)
             st.pyplot(fig_d_72)
-        if use_30 and data_30:
+        if data_30 is not None:
             with col6:
-                st.write("Gamma 30")
+                st.write("Mean Applications: 30")
                 fig_d_30 = create_panel_d(data_30, selected_program, selected_signal)
                 st.pyplot(fig_d_30)
-
-st.header("Residual Graphs")
-col_r1, col_r2 = st.columns(2) if use_30 else [st.container(), None]
-
-with col_r1:
-    st.subheader("Gamma 72")
-    res_data_72 = load_residual_data(dir_72)
-    if not res_data_72.empty:
-        fig_res_72 = create_residual_graphs(res_data_72)
-        st.pyplot(fig_res_72)
-    else:
-        st.write("No residual data available for Gamma 72.")
-
-if use_30:
-    with col_r2:
-        st.subheader("Gamma 30")
-        res_data_30 = load_residual_data(dir_30)
-        if not res_data_30.empty:
-            fig_res_30 = create_residual_graphs(res_data_30)
-            st.pyplot(fig_res_30)
-        else:
-            st.write("No residual data available for Gamma 30.")
