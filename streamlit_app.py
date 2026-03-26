@@ -307,12 +307,12 @@ if len(programs) > 0:
     st.markdown(f"<p style='color: black; font-size: 1.1rem;'>{Legends['A']}</p>", unsafe_allow_html=True)
     col1_a, col2_a = st.columns(2)
     with col1_a:
-        st.write("Mean Applications: 72")
+        st.markdown("<p style='font-size: 1.50rem; font-weight: bold;'>Mean Applications: 72</p>", unsafe_allow_html=True)
         fig_a_72 = create_panel_a(data_72, selected_program)
         st.pyplot(fig_a_72)
     if data_30 is not None:
         with col2_a:
-            st.write("Mean Applications: 30")
+            st.markdown("<p style='font-size: 1.50rem; font-weight: bold;'>Mean Applications: 30</p>", unsafe_allow_html=True)
             fig_a_30 = create_panel_a(data_30, selected_program)
             st.pyplot(fig_a_30)
 
@@ -320,12 +320,12 @@ if len(programs) > 0:
     st.markdown(f"<p style='color: black; font-size: 1.1rem;'>{Legends['B']}</p>", unsafe_allow_html=True)
     col1_b, col2_b = st.columns(2)
     with col1_b:
-        st.write("Mean Applications: 72")
+        st.markdown("<p style='font-size: 1.50rem; font-weight: bold;'>Mean Applications: 72</p>", unsafe_allow_html=True)
         fig_b_72 = create_panel_b(data_72, selected_program)
         st.pyplot(fig_b_72)
     if data_30 is not None:
         with col2_b:
-            st.write("Mean Applications: 30")
+            st.markdown("<p style='font-size: 1.50rem; font-weight: bold;'>Mean Applications: 30</p>", unsafe_allow_html=True)
             fig_b_30 = create_panel_b(data_30, selected_program)
             st.pyplot(fig_b_30)
 
@@ -333,12 +333,12 @@ if len(programs) > 0:
     st.markdown(f"<p style='color: black; font-size: 1.1rem;'>{Legends['C']}</p>", unsafe_allow_html=True)
     col1_c, col2_c = st.columns(2)
     with col1_c:
-        st.write("Mean Applications: 72")
+        st.markdown("<p style='font-size: 1.50rem; font-weight: bold;'>Mean Applications: 72</p>", unsafe_allow_html=True)
         fig_c_72 = create_panel_c(data_72, selected_program)
         st.pyplot(fig_c_72)
     if data_30 is not None:
         with col2_c:
-            st.write("Mean Applications: 30")
+            st.markdown("<p style='font-size: 1.50rem; font-weight: bold;'>Mean Applications: 30</p>", unsafe_allow_html=True)
             fig_c_30 = create_panel_c(data_30, selected_program)
             st.pyplot(fig_c_30)
 
